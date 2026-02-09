@@ -1,4 +1,7 @@
-# 1. 가상환경 내부 설치 파일들 무시 (이게 9900개입니다)
+# 1. 가상환경 무시 (10K 문제 해결의 핵심)
+myvenv/
+venv/
+.venv/
 Lib/
 Scripts/
 Include/
@@ -6,10 +9,22 @@ pyvenv.cfg
 share/
 etc/
 
-# 2. 파이썬 임시 파일 무시
+# 2. 파이썬 임시 파일 및 환경 변수
 __pycache__/
 *.pyc
 .env
+.ipynb_checkpoints/
 
-# 3. 데이터베이스 원본 폴더 무시 (이미 쪼갰으니까)
+# 3. 벡터 데이터베이스 폴더 (용량 및 호환성 문제)
+chroma_db_part1/ 
+chroma_db_part2/
 chroma_db_storage/
+
+# 4. 에디터 및 OS 설정 파일
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 5. 기타 결과물
+chat_history.json
