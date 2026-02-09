@@ -15,6 +15,7 @@ import gc
 # [필수 라이브러리]
 import pdf2image  # 모듈 전체를 가져옵니다.
 from pdf2image import convert_from_path
+from pypdf import PdfReader
 from sentence_transformers import CrossEncoder 
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
@@ -587,15 +588,15 @@ if uploaded_files:
                     tmp_path = tmp_file.name
                 
                 try:
-                    # PDF 정보만 먼저 가져오기 (전체 로드 X)
-                    # 별도의 import 없이 모듈명을 앞에 붙여 호출합니다.
-                    info = pdf2image.pdf_info_to_dict(tmp_path, poppler_path=POPPLER_PATH)
-                    total_pages = info["Pages"]
+                    # ✅ [수정] pypdf를 사용하여 페이지 수를 가져옵니다.
+                    # 라이브러리 버전 이슈(1.17.0)를 완벽히 피하는 가장 안정적인 방법입니다.
+                    reader = PdfReader(tmp_path)
+                    total_pages = len(reader.pages)
                     
                     page_results = []
                     progress = st.progress(0)
 
-                    # 2. Vision 분석 루프: 한 페이지씩 끊어서 처리
+                    # 2. Vision 분석 루프 시작 (이후 코드는 동일)
                     for i in range(total_pages):
                         curr_page = i + 1
                         progress.progress(curr_page / total_pages, text=f"🔍 {curr_page}/{total_pages} 페이지 정밀 진단 중...")
