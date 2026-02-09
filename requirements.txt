@@ -17,7 +17,7 @@ sentence-transformers
 rank_bm25
 
 # --- Document & Image Processing ---
-pdf2image
+pdf2image==1.16.3
 pypdf
 pillow
 
