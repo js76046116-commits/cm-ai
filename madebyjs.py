@@ -13,9 +13,7 @@ import gc
 
 
 # [필수 라이브러리]
-import pdf2image  # 모듈 전체를 가져옵니다.
 from pdf2image import convert_from_path
-from pypdf import PdfReader
 from sentence_transformers import CrossEncoder 
 from langchain_chroma import Chroma
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI, HarmBlockThreshold, HarmCategory
@@ -314,30 +312,45 @@ def analyze_page_detail(image_base64, query, retrieved_docs):
     if not laws_context.strip():
         laws_context = "관련된 구체적 법규 데이터가 없습니다. 일반 기술 지식을 바탕으로 분석하세요."
 
+    # [수정 방향] 사용자께서 주신 지침을 변수로 고정하여 프롬프트에 강제 주입
+    structural_guideline = """
+    [최우선 관리 항목: 구조 안전성 및 보강 공법 검토 지침]
+    1. 구조 안전성 및 보강 공법 검토 (최우선 관리 항목)
+       - 본 프로젝트는 노후 건물(1974년 준공) 상부에 1개 층을 수직 증축하고 3개 동을 연결하는 고난도 공사임.
+    2. 기존 구조물 상태 평가 및 보강 선후행 관리:
+       - 철거 공사 착수 전, 기존 슬래브, 보, 기둥의 균열, 처짐, 내력 저하 여부 점검 및 준공 도면 일치 여부 보고 확인.
+       - 증축 공사(철골 세우기) 전, 하부 구조물의 연직 보강(단면 증타, 철판 보강) 및 내진 보강(탄소섬유 보강) 완료 여부 확인.
+    3. 주요 보강 공법에 대한 적정성 검토:
+       - 기둥/보 보강: 기둥 단면 증타 및 철판 압착 보강(SV-401) 시공 시, 기존 콘크리트 면의 치핑(Chipping) 상태와 신구 접착제 성능, 무수축 몰탈의 충전 밀실도 검증.
+       - 슬래브 탄소섬유 보강: 탄소섬유 시트(SK-N600 등) 부착 시, 바탕면 처리 상태(평활도)와 프라이머 도포 적정성, 부착 강도 시험(Pull-off test) 계획 수립 여부.
+    4. 신구 접합부 및 이질 재료 연결 상세:
+       - 기존 RC 기둥 상부 신설 철골 기둥(SC1, SC2 등) 정착용 베이스 플레이트 및 케미컬 앵커(Hilti RE500 등) 인발 내력 시험 성적서 확인 및 간섭 검토.
+       - 철골보(H-Beam)와 기존 콘크리트 보 연결 부위 전단 접합 상세(Shear Connection) 시공성 검토.
+    """
+
     prompt_text = f"""
         당신은 베테랑 건설 사업 관리자(CM)이자 시공 기술사입니다. 
-        당신의 최우선 임무는 제공된 **[참고 법규/기준] DB와 도면을 대조하여 팩트 중심의 검토 보고서**를 작성하는 것입니다.
+        당신의 최우선 임무는 제공된 **[구조 안전 지침]**과 도면을 대조하여 팩트 중심의 검토 보고서를 작성하는 것입니다.
         
         [질문/검토 요청]: {query}
+        
+        {structural_guideline}
         
         [참고 법규/기준(DB)]:
         {laws_context}
         
-        [분석 및 출력 지침 - DB 기반 필터링]:
-        1. **DB 근거 자동 매핑 (필수):** 모든 지적 사항은 반드시 [참고 법규/기준]에 포함된 특정 문구, 조항, 또는 체크리스트 항목명을 기반으로 해야 합니다. 답변 작성 시 **"[근거: DB 내 항목명 또는 법규명]"**을 반드시 머리말에 붙이십시오.
-        2. **출처 없는 지적 금지:** 제공된 DB에 근거가 없는 내용은 '기술적 제언'으로만 분리하고, 주관적인 판단으로 '법규 위반'이라 단정하지 마십시오.
-        3. **수리적 팩트 체크:** 옥상 파라펫 등 높이 검토 시 도면의 $EL$(상단)과 $FL$(바닥) 값을 찾아 계산식을 명시하십시오. (예: EL 15,200 - FL 14,000 = 1,200mm)
-        4. **단계별 필터:** 기본 도면 수준에서 당연히 누락되는 상세도(배근, 상세 관통부 등)에 대한 지적은 결과에서 제외하십시오.
+        [분석 지침]:
+        1. **지침 기반 필터링:** 도면 분석 시 반드시 위 1~4번 지침을 기준으로 위반 사항이나 누락 사항을 찾으십시오.
+        2. **수리적 팩트 체크:** 앵커의 정착 깊이, 보강 두께, EL/FL 값 등을 도면에서 찾아 계산식을 명시하십시오.
+        3. **상세도 검토:** SC1, SC2 등 신설 기둥과 기존 RC 기둥의 접합부(Base Plate) 상세가 지침(Hilti RE500 등)과 일치하는지 확인하십시오.
 
-        [답변 구조 - 실무 리포트 양식]:
-        - **중대 위반/위험 항목:**
-            * **[근거]:** (DB 내 관련 조항/체크리스트 번호/수치 기준을 정확히 인용)
-            * 현황: (도면 위치 및 확인된 수치)
-            * 문제점: (DB 기준과 도면 데이터의 불일치 설명)
-            * 개선안: (DB 가이드라인에 따른 조치 사항)
-        - **기술적 제언:** DB에는 없으나 시공 전문가로서 제언하는 사항
-        
-        ※ 만약 DB와 대조했을 때 위반 사항이 없으면 "검토 결과 특이사항 없음"으로 답변하십시오.
+        [답변 구조]:
+        - **중대 위반/위험 항목 (구조 보강 특화):**
+            * **[근거]:** (위 지침 중 해당 항목 번호 명시)
+            * 현황: (도면 위치 및 확인된 수치/표기)
+            * 문제점: (지침 대비 미흡한 점이나 예상되는 구조적 결함)
+            * 개선안: (구체적 보강 공법이나 시공 시 보완 대책)
+        - **기술적 제언:** 구조 외에 시공 전문가로서 제언하는 사항
         """
     
     message = HumanMessage(content=[
@@ -356,18 +369,16 @@ def generate_final_report(file_name, page_results):
     for item in page_results:
         raw_data += f"\n[Page {item['page']}]: {item['content']}\n"
     
-# 오늘 날짜 가져오기
     current_date = datetime.now().strftime("%Y년 %m월 %d일")
     
+    # 보고서 생성 시에도 1974년 노후 건물 증축이라는 맥락을 유지하게 함
     prompt = f"""
-    당신은 건설사업관리단장(CM단장)입니다.
-    다음 데이터를 바탕으로 '최종 시공 품질/안전 검토 보고서'를 작성하세요.
+    당신은 건설사업관리단장(CM단장)입니다. 
+    1974년 준공 노후 건물의 수직 증축 및 보강 공사라는 특수성을 고려하여 '최종 시공 품질/안전 검토 보고서'를 작성하세요.
 
-    [주의사항 - 반드시 지킬 것]
-    1. **절대 가상의 프로젝트명(예: 신부평 HVDC 등)이나 가상의 인물 이름을 지어내지 마세요.**
-    2. 문서에 명시된 정보가 없다면 프로젝트명은 '{file_name}'으로 기재하세요.
-    3. 작성 일자는 반드시 '{current_date}'로 기재하세요.
-    4. 작성자 성명은 'AI 건설 지원 시스템'으로 기재하세요.
+    [작성 가이드]
+    - '구조 안전성 확보'와 '보강 공법의 실무적 적정성'을 가장 강조하십시오.
+    - 프로젝트명은 별도 언급 없으면 '{file_name}'으로 기재하세요.
 
     [분석 데이터]
     {raw_data}
@@ -375,8 +386,9 @@ def generate_final_report(file_name, page_results):
     [보고서 형식]
     1. 도면명: {file_name}
     2. 작성 일자: {current_date}
-    3. 작성자: AI 건설 지원 시스템
-    4. 검토 내용 요약: ...
+    3. 작성자: AI 건설 지원 시스템 (구조 안전 특화)
+    4. 검토 총평: (노후 건축물 증축에 따른 구조적 리스크와 보강 대책 요약)
+    5. 주요 검토 내용 (항목별 요약): ...
     """
     return llm_text.invoke(prompt).content
 
@@ -588,15 +600,15 @@ if uploaded_files:
                     tmp_path = tmp_file.name
                 
                 try:
-                    # ✅ [수정] pypdf를 사용하여 페이지 수를 가져옵니다.
-                    # 라이브러리 버전 이슈(1.17.0)를 완벽히 피하는 가장 안정적인 방법입니다.
-                    reader = PdfReader(tmp_path)
-                    total_pages = len(reader.pages)
+                    # PDF 정보만 먼저 가져오기 (전체 로드 X)
+                    from pdf2image import pdf_info_to_dict
+                    info = pdf_info_to_dict(tmp_path, poppler_path=POPPLER_PATH)
+                    total_pages = info["Pages"]
                     
                     page_results = []
                     progress = st.progress(0)
 
-                    # 2. Vision 분석 루프 시작 (이후 코드는 동일)
+                    # 2. Vision 분석 루프: 한 페이지씩 끊어서 처리
                     for i in range(total_pages):
                         curr_page = i + 1
                         progress.progress(curr_page / total_pages, text=f"🔍 {curr_page}/{total_pages} 페이지 정밀 진단 중...")
