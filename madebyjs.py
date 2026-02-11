@@ -312,7 +312,7 @@ def analyze_page_detail(image_base64, query, retrieved_docs):
     if not laws_context.strip():
         laws_context = "관련된 구체적 법규 데이터가 없습니다. 일반 기술 지식을 바탕으로 분석하세요."
 
-    # [수정 방향] 사용자께서 주신 지침을 변수로 고정하여 프롬프트에 강제 주입
+    # [사용자 요청 지침] 1974년 노후 건물 수직 증축 및 보강 공사 특화 가이드라인
     structural_guideline = """
     [최우선 관리 항목: 구조 안전성 및 보강 공법 검토 지침]
     1. 구조 안전성 및 보강 공법 검토 (최우선 관리 항목)
@@ -600,21 +600,20 @@ if uploaded_files:
                     tmp_path = tmp_file.name 
                 
                 try:
-                    # [수정된 부분] pdf_info_to_dict 대신 pdfinfo_from_path 사용
+                    # [핵심 수정] pdf_info_to_dict 대신 pdfinfo_from_path 사용
                     from pdf2image import pdfinfo_from_path
                     
-                    # PDF 정보 가져오기
+                    # PDF 정보 가져오기 (전체 페이지 수 확인)
                     info = pdfinfo_from_path(tmp_path, poppler_path=POPPLER_PATH)
-                    total_pages = info["Pages"] # 페이지 수 추출
+                    total_pages = info["Pages"] 
                     
                     page_results = []
                     progress = st.progress(0)
 
-                    # 2. Vision 분석 루프
+                    # 2. Vision 분석 루프 시작
                     for i in range(total_pages):
                         curr_page = i + 1
                         progress.progress(curr_page / total_pages, text=f"🔍 {curr_page}/{total_pages} 페이지 정밀 진단 중...")
-                        
                         # [핵심] 해당 페이지만 메모리에 로드 + 해상도 조절(size)로 메모리 절약
                         # size=(1200, None)은 가로를 1200px로 맞추고 세로는 비율에 맞게 조정합니다.
                         page_images = convert_from_path(
