@@ -597,7 +597,7 @@ if uploaded_files:
                 # 1. 임시 파일 저장
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
                     tmp_file.write(target_file.read())
-                    tmp_path = tmp_file.name
+                    tmp_path = tmp_file.name 
                 
                 try:
                     # [수정된 부분] pdf_info_to_dict 대신 pdfinfo_from_path 사용
