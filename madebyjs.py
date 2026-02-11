@@ -600,15 +600,17 @@ if uploaded_files:
                     tmp_path = tmp_file.name
                 
                 try:
-                    # PDF 정보만 먼저 가져오기 (전체 로드 X)
-                    from pdf2image import pdf_info_to_dict
-                    info = pdf_info_to_dict(tmp_path, poppler_path=POPPLER_PATH)
-                    total_pages = info["Pages"]
+                    # [수정된 부분] pdf_info_to_dict 대신 pdfinfo_from_path 사용
+                    from pdf2image import pdfinfo_from_path
+                    
+                    # PDF 정보 가져오기
+                    info = pdfinfo_from_path(tmp_path, poppler_path=POPPLER_PATH)
+                    total_pages = info["Pages"] # 페이지 수 추출
                     
                     page_results = []
                     progress = st.progress(0)
 
-                    # 2. Vision 분석 루프: 한 페이지씩 끊어서 처리
+                    # 2. Vision 분석 루프
                     for i in range(total_pages):
                         curr_page = i + 1
                         progress.progress(curr_page / total_pages, text=f"🔍 {curr_page}/{total_pages} 페이지 정밀 진단 중...")
