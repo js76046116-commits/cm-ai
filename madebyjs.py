@@ -627,7 +627,7 @@ if uploaded_files:
                         
                         if not page_images:
                             continue
-                        
+                         
                         page_img = page_images[0]
                         
                         # 이미지 base64 변환
